@@ -1,5 +1,3 @@
-//! Replaying the event stream into a full run snapshot.
-
 use crate::domain::{CareerPhase, FragmentToken, GoddessColor, TrainingType};
 use crate::events::RunEvent;
 use crate::tables;
@@ -8,18 +6,14 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use serde::Serialize;
 
-/// One tracked facility (training).
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct FacilityInfo {
     pub clicks: u32,
     pub fragments: u32,
-    /// 2 per click, 1 per fragment, 1 per 5 fragments, plus GM race points.
     pub points: u32,
-    /// `points / 12`.
     pub level: u32,
 }
 
-/// A recorded burst.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BurstRecord {
     pub turn: u32,
@@ -27,25 +21,19 @@ pub struct BurstRecord {
     pub phase: CareerPhase,
 }
 
-/// Everything derived from the event list so far.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RunSnapshot {
     pub phase: CareerPhase,
     pub last_turn: u32,
-    /// Fragments gained since the last burst; the first 8 form the live tree.
     pub pending_slots: Vec<FragmentToken>,
     pub tree: TreeSnapshot,
     pub facilities: [FacilityInfo; TrainingType::COUNT],
-    /// Goddess level per color: one per burst of that color, capped at 5.
     pub goddess_levels: [u8; GoddessColor::COUNT],
     pub bursts: Vec<BurstRecord>,
     pub races_won: u32,
     pub races_lost: u32,
 }
 
-/// Rebuilds the full snapshot from the event list. The random tree rules
-/// (training inheritance, PK ties) are rolled with `rng`; pass a seeded rng
-/// for identical replays, or use [`replay_seeded`].
 pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
     let mut phase = CareerPhase::Junior;
     let mut last_turn = 0;
@@ -87,16 +75,14 @@ pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
             RunEvent::BurstActivated { turn, color } => {
                 last_turn = *turn;
                 bursts.push(BurstRecord { turn: *turn, color: *color, phase });
-                // The burst consumes up to one full tree; fragments gathered
-                // while holding a filled tree seed the next one.
                 let consumed = pending.len().min(SLOT_COUNT);
                 pending.drain(..consumed);
             }
         }
     }
 
-    let race_points = races_won * tables::RACE_WIN_POINTS
-        + races_lost * tables::RACE_LOSS_POINTS;
+    let race_points =
+        races_won * tables::RACE_WIN_POINTS + races_lost * tables::RACE_LOSS_POINTS;
     let facilities: [FacilityInfo; TrainingType::COUNT] = std::array::from_fn(|i| {
         let clicks = clicks[i];
         let fragments = fragments[i];
@@ -131,8 +117,6 @@ pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
     }
 }
 
-/// [`replay`] with a fixed seed, so the same event list always produces the
-/// same snapshot.
 pub fn replay_seeded(events: &[RunEvent], seed: u64) -> RunSnapshot {
     let mut rng = StdRng::seed_from_u64(seed);
     replay(events, &mut rng)
@@ -168,12 +152,10 @@ mod tests {
         ];
         let snapshot = replay_seeded(&events, 0);
 
-        // 3 clicks * 2 + 5 fragments + 1 (per-5) + 8 (race win) = 20.
         let speed = &snapshot.facilities[TrainingType::Speed.index()];
         assert_eq!(speed.points, 20);
         assert_eq!(speed.level, 1);
 
-        // Every facility gets the race points even when never clicked.
         let stamina = &snapshot.facilities[TrainingType::Stamina.index()];
         assert_eq!(stamina.points, tables::RACE_WIN_POINTS);
     }

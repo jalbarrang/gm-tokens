@@ -1,9 +1,5 @@
-//! Core vocabulary of the Grand Master scenario.
-
 use serde::{Deserialize, Serialize};
 
-/// The three goddess colors a fragment can carry. The color of the tree's top
-/// node decides which goddess burst a completed tree activates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GoddessColor {
@@ -15,7 +11,6 @@ pub enum GoddessColor {
 impl GoddessColor {
     pub const COUNT: usize = 3;
 
-    /// Index into the per-color arrays used across the crate.
     pub fn index(self) -> usize {
         match self {
             GoddessColor::Red => 0,
@@ -24,13 +19,10 @@ impl GoddessColor {
         }
     }
 
-    /// All colors, in index order.
     pub const ALL: [GoddessColor; GoddessColor::COUNT] =
         [GoddessColor::Red, GoddessColor::Blue, GoddessColor::Yellow];
 }
 
-/// The six training attributes. A fragment's attribute feeds facility points
-/// into that training.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrainingType {
@@ -45,7 +37,6 @@ pub enum TrainingType {
 impl TrainingType {
     pub const COUNT: usize = 6;
 
-    /// Index into the per-training arrays used across the crate.
     pub fn index(self) -> usize {
         match self {
             TrainingType::Speed => 0,
@@ -57,7 +48,6 @@ impl TrainingType {
         }
     }
 
-    /// All trainings, in index order.
     pub const ALL: [TrainingType; TrainingType::COUNT] = [
         TrainingType::Speed,
         TrainingType::Stamina,
@@ -68,7 +58,6 @@ impl TrainingType {
     ];
 }
 
-/// How a fragment entered the run; drives the double-drop tables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FragmentSource {
@@ -81,7 +70,6 @@ pub enum FragmentSource {
     GoddessEvent,
 }
 
-/// Career phases; drives the burst plan (3-4-4-1) and the year-end red rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CareerPhase {
@@ -91,12 +79,10 @@ pub enum CareerPhase {
     UraFinale,
 }
 
-/// A single fragment sitting in the current tree.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FragmentToken {
     pub color: GoddessColor,
     pub training: TrainingType,
     pub source: FragmentSource,
-    /// Turn the fragment was gained (the host's turn numbering, opaque to the crate).
     pub turn: u32,
 }

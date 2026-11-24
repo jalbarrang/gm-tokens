@@ -1,15 +1,10 @@
-//! The guide's rules of thumb, evaluated as pure functions of the snapshot.
-//! The crate never draws anything; hosts decide how to display these.
-
 use crate::domain::{CareerPhase, GoddessColor};
 use crate::state::RunSnapshot;
 use crate::tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdvisoryKind {
-    /// Good-to-know guidance.
     Info,
-    /// The run is drifting off the plan.
     Warning,
 }
 
@@ -27,13 +22,9 @@ fn warning(message: impl Into<String>) -> Advisory {
     Advisory { kind: AdvisoryKind::Warning, message: message.into() }
 }
 
-/// Evaluates the guide's rules of thumb against the snapshot. Same snapshot
-/// in, same advice out.
 pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
     let mut out: Vec<Advisory> = Vec::new();
 
-    // Golden-rule slots: 1 and 5 each steer three upper fragments and the
-    // final burst color, so they are worth sacrificing an optimal click.
     let next_slot = snapshot.tree.next_slot_index();
     if next_slot == 0 || next_slot == 4 {
         let slot = if next_slot == 0 { 1 } else { 5 };
@@ -42,21 +33,23 @@ pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
         )));
     }
 
-    // A red in slot 1 means +50 energy on burst; the overcap risk is real.
-    if snapshot.tree.bottom_slots.first().is_some_and(|f| f.color == GoddessColor::Red) {
+    if snapshot
+        .tree
+        .bottom_slots
+        .first()
+        .is_some_and(|f| f.color == GoddessColor::Red)
+    {
         out.push(warning(
             "Slot 1 is red: a Red burst grants +50 energy — watch for overcapping.",
         ));
     }
 
-    // The first burst of the run should be Blue.
     if snapshot.bursts.is_empty() {
         out.push(info(
             "First burst of the run should be Blue (bond velocity + hint-rate passive).",
         ));
     }
 
-    // Yellow is a pacing tool; cap it at 3 per run (4 tolerated).
     let yellows = snapshot
         .bursts
         .iter()
@@ -70,7 +63,6 @@ pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
         )));
     }
 
-    // Burst-plan progress for the current phase.
     let expected = tables::expected_bursts(snapshot.phase);
     let actual = snapshot
         .bursts
@@ -82,7 +74,6 @@ pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
         snapshot.phase
     )));
 
-    // Phase-specific color targets.
     let reds_in_phase = snapshot
         .bursts
         .iter()
@@ -145,7 +136,9 @@ mod tests {
             source: FragmentSource::Training,
         }];
         let snapshot = snapshot(&events);
-        assert!(messages(&evaluate(&snapshot)).iter().any(|m| m.contains("overcapping")));
+        assert!(messages(&evaluate(&snapshot))
+            .iter()
+            .any(|m| m.contains("overcapping")));
     }
 
     #[test]
@@ -154,7 +147,9 @@ mod tests {
             .map(|turn| RunEvent::BurstActivated { turn, color: GoddessColor::Yellow })
             .collect();
         let snapshot = snapshot(&events);
-        assert!(messages(&evaluate(&snapshot)).iter().any(|m| m.contains("Yellow burst #4")));
+        assert!(messages(&evaluate(&snapshot))
+            .iter()
+            .any(|m| m.contains("Yellow burst #4")));
     }
 
     #[test]
@@ -164,6 +159,8 @@ mod tests {
             RunEvent::BurstActivated { turn: 71, color: GoddessColor::Blue },
         ];
         let snapshot = snapshot(&events);
-        assert!(messages(&evaluate(&snapshot)).iter().any(|m| m.contains("URA finale")));
+        assert!(messages(&evaluate(&snapshot))
+            .iter()
+            .any(|m| m.contains("URA finale")));
     }
 }
