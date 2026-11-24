@@ -1,0 +1,10 @@
+[package]
+name = "gm-tokens"
+version = "0.1.0"
+edition = "2021"
+description = "Event-sourced tracker for Grand Master scenario tokens (fragments, pyramid tree, facilities, goddess levels, bursts)."
+license = "MIT"
+
+[dependencies]
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
