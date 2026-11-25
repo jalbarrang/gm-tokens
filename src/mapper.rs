@@ -60,19 +60,33 @@ impl MasterData {
     }
 }
 
+/// One packet diff: the events it produced and what it could not resolve.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PacketDiff {
+    pub events: Vec<RunEvent>,
+    /// New bottom slots whose master rows were missing; their fragments were skipped.
+    pub unresolved_slots: usize,
+}
+
 /// Diffs two consecutive packets into events, mirroring the game's own delta
 /// logic (`WorkSingleModeChangeParameterInfo`): a new bottom slot is a
-/// fragment, a grown active-effect array is a burst, a new race-history row
-/// is a GM race. `turn` stamps fragment events; `source` says which action
+/// fragment, a new active-effect row is a burst, a new race-history row is a
+/// GM race. `turn` stamps fragment events; `source` says which action
 /// produced this response, since the packet does not carry either.
+///
+/// `prev` and `next` must be consecutive packets of one live session. To
+/// start tracking mid-run, seed `prev` with the first packet observed —
+/// diffing it against itself yields nothing, while a fresh default would
+/// count every placed fragment as newly gained.
 pub fn events_between(
     prev: &VenusDataSet,
     next: &VenusDataSet,
     masters: &MasterData,
     turn: u32,
     source: FragmentSource,
-) -> Vec<RunEvent> {
+) -> PacketDiff {
     let mut events = Vec::new();
+    let mut unresolved_slots = 0;
 
     let prev_bottom: HashSet<u8> = prev
         .spirit_info_array
@@ -84,30 +98,31 @@ pub fn events_between(
         if slot.spirit_num >= SPIRIT_FRAGMENT_MAX || prev_bottom.contains(&slot.spirit_num) {
             continue;
         }
-        if let Some((color, training)) = masters.resolve(slot) {
-            events.push(RunEvent::FragmentGained {
+        match masters.resolve(slot) {
+            Some((color, training)) => events.push(RunEvent::FragmentGained {
                 turn,
                 color,
                 training,
                 source,
-            });
+            }),
+            None => unresolved_slots += 1,
         }
     }
 
-    if next.venus_spirit_active_effect_info_array.len()
-        > prev.venus_spirit_active_effect_info_array.len()
-    {
-        let newest = next
-            .venus_spirit_active_effect_info_array
-            .iter()
-            .max_by_key(|effect| effect.begin_turn);
-        if let Some(effect) = newest {
-            if let Some(color) = goddess_color(effect.chara_id) {
-                events.push(RunEvent::BurstActivated {
-                    turn: effect.begin_turn,
-                    color,
-                });
-            }
+    let prev_effects: HashSet<(u32, u32)> = prev
+        .venus_spirit_active_effect_info_array
+        .iter()
+        .map(|effect| (effect.chara_id, effect.begin_turn))
+        .collect();
+    for effect in &next.venus_spirit_active_effect_info_array {
+        if prev_effects.contains(&(effect.chara_id, effect.begin_turn)) {
+            continue;
+        }
+        if let Some(color) = goddess_color(effect.chara_id) {
+            events.push(RunEvent::BurstActivated {
+                turn: effect.begin_turn,
+                color,
+            });
         }
     }
 
@@ -126,14 +141,17 @@ pub fn events_between(
         });
     }
 
-    events
+    PacketDiff {
+        events,
+        unresolved_slots,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::{GoddessColor, TrainingType};
-    use crate::tree::VENUS_CHARA_BLUE;
+    use crate::tree::{VENUS_CHARA_BLUE, VENUS_CHARA_RED, VENUS_CHARA_YELLOW};
 
     fn masters() -> MasterData {
         MasterData {
@@ -160,32 +178,48 @@ mod tests {
             ..VenusDataSet::default()
         };
 
-        let events = events_between(&prev, &next, &masters(), 12, FragmentSource::Training);
-        assert_eq!(events.len(), 1);
+        let diff = events_between(&prev, &next, &masters(), 12, FragmentSource::Training);
         assert_eq!(
-            events[0],
-            RunEvent::FragmentGained {
-                turn: 12,
-                color: GoddessColor::Blue,
-                training: TrainingType::Wit,
-                source: FragmentSource::Training,
+            diff,
+            PacketDiff {
+                events: vec![RunEvent::FragmentGained {
+                    turn: 12,
+                    color: GoddessColor::Blue,
+                    training: TrainingType::Wit,
+                    source: FragmentSource::Training,
+                }],
+                unresolved_slots: 0,
             }
         );
     }
 
     #[test]
-    fn a_grown_active_effect_array_is_a_burst() {
+    fn each_new_active_effect_row_is_a_burst() {
         let next = VenusDataSet {
-            venus_spirit_active_effect_info_array: vec![ActiveSpiritEffect {
-                chara_id: VENUS_CHARA_BLUE,
-                effect_group_id: 11,
-                begin_turn: 40,
-                end_turn: 42,
-            }],
+            venus_spirit_active_effect_info_array: vec![
+                ActiveSpiritEffect {
+                    chara_id: VENUS_CHARA_BLUE,
+                    effect_group_id: 11,
+                    begin_turn: 40,
+                    end_turn: 42,
+                },
+                ActiveSpiritEffect {
+                    chara_id: VENUS_CHARA_RED,
+                    effect_group_id: 10,
+                    begin_turn: 41,
+                    end_turn: 43,
+                },
+                ActiveSpiritEffect {
+                    chara_id: VENUS_CHARA_YELLOW,
+                    effect_group_id: 10,
+                    begin_turn: 30,
+                    end_turn: 32,
+                },
+            ],
             ..VenusDataSet::default()
         };
 
-        let events = events_between(
+        let diff = events_between(
             &VenusDataSet::default(),
             &next,
             &masters(),
@@ -193,8 +227,57 @@ mod tests {
             FragmentSource::GoddessEvent,
         );
         assert_eq!(
-            events,
-            vec![RunEvent::BurstActivated { turn: 40, color: GoddessColor::Blue }]
+            diff.events,
+            vec![
+                RunEvent::BurstActivated { turn: 40, color: GoddessColor::Blue },
+                RunEvent::BurstActivated { turn: 41, color: GoddessColor::Red },
+                RunEvent::BurstActivated { turn: 30, color: GoddessColor::Yellow },
+            ]
+        );
+    }
+
+    #[test]
+    fn diffing_a_packet_against_itself_yields_nothing() {
+        let loaded = VenusDataSet {
+            spirit_info_array: vec![
+                SpiritSlot { spirit_num: 0, spirit_id: 501, effect_group_id: 10 },
+                SpiritSlot { spirit_num: 8, spirit_id: 502, effect_group_id: 11 },
+                SpiritSlot { spirit_num: 15, spirit_id: VENUS_CHARA_YELLOW, effect_group_id: 12 },
+            ],
+            venus_spirit_active_effect_info_array: vec![ActiveSpiritEffect {
+                chara_id: VENUS_CHARA_BLUE,
+                effect_group_id: 11,
+                begin_turn: 40,
+                end_turn: 42,
+            }],
+            venus_race_history_array: vec![VenusRaceHistory { race_num: 2, turn: 24, result_rank: 1 }],
+            ..VenusDataSet::default()
+        };
+
+        let diff = events_between(&loaded, &loaded, &masters(), 42, FragmentSource::Training);
+        assert_eq!(diff, PacketDiff::default());
+    }
+
+    #[test]
+    fn unresolvable_slots_are_reported_not_dropped() {
+        let next = VenusDataSet {
+            spirit_info_array: vec![SpiritSlot { spirit_num: 0, spirit_id: 999, effect_group_id: 10 }],
+            ..VenusDataSet::default()
+        };
+
+        let diff = events_between(
+            &VenusDataSet::default(),
+            &next,
+            &masters(),
+            12,
+            FragmentSource::Training,
+        );
+        assert_eq!(
+            diff,
+            PacketDiff {
+                events: Vec::new(),
+                unresolved_slots: 1,
+            }
         );
     }
 
@@ -212,13 +295,10 @@ mod tests {
             ..VenusDataSet::default()
         };
 
-        let events = events_between(
-            &prev,
-            &next,
-            &masters(),
-            48,
-            FragmentSource::TargetRace,
+        let diff = events_between(&prev, &next, &masters(), 48, FragmentSource::TargetRace);
+        assert_eq!(
+            diff.events,
+            vec![RunEvent::GmRaceCompleted { turn: 48, won: false }]
         );
-        assert_eq!(events, vec![RunEvent::GmRaceCompleted { turn: 48, won: false }]);
     }
 }

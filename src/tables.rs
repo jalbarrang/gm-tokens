@@ -2,7 +2,9 @@
 
 use crate::domain::{CareerPhase, FragmentSource, GoddessColor, TrainingType};
 
-/// Chance a source drops a second fragment.
+/// Chance a source drops a second fragment; every rate here is from the
+/// guide except `GoddessEvent`, an assumed placeholder the guide does not
+/// state.
 pub fn double_drop_chance(source: FragmentSource) -> f32 {
     match source {
         FragmentSource::TargetRace => 1.00,

@@ -31,11 +31,15 @@ event list *is* a saved run), and `state::replay` rebuilds everything:
   URA force-red) as plain data; hosts decide how to display them.
 - `mapper` — packet → events: `events_between` diffs two `VenusDataSet`s (the
   MessagePack `venus_data_set` the server sends each turn) with the game's
-  own delta logic — new bottom slots are fragments, a grown active-effect
-  array is a burst, a new race-history row is a GM race. Colour and attribute
-  are not in the packet, so `MasterData` carries the two master-table joins
-  (`spirit_id` → goddess, `effect_group_id` → attribute). Training clicks are
-  the host's to emit; the packet does not carry them.
+  own delta logic — new bottom slots are fragments, new active-effect rows
+  are bursts, a new race-history row is a GM race. Colour and attribute are
+  not in the packet, so `MasterData` carries the two master-table joins
+  (`spirit_id` → goddess, `effect_group_id` → attribute); rows it cannot
+  resolve are reported in `PacketDiff::unresolved_slots`, never dropped
+  silently. `prev` and `next` must be consecutive packets of one live
+  session — to start tracking mid-run, seed `prev` with the first packet
+  observed. Training clicks are the host's to emit; the packet does not
+  carry them.
 
 ## Quick start
 
