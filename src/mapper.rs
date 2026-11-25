@@ -43,7 +43,7 @@ pub struct VenusDataSet {
 }
 
 /// The master-data joins the packet cannot carry.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct MasterData {
     /// spirit_id -> owning goddess chara_id (`single_mode_venus_spirit_group.CharaId`).
     pub spirit_color: HashMap<u32, u32>,
@@ -61,7 +61,7 @@ impl MasterData {
 }
 
 /// One packet diff: the events it produced and what it could not resolve.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct PacketDiff {
     pub events: Vec<RunEvent>,
     /// New bottom slots whose master rows were missing; their fragments were skipped.

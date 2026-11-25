@@ -1,16 +1,17 @@
 use crate::domain::{CareerPhase, GoddessColor};
 use crate::state::RunSnapshot;
 use crate::tables;
+use serde::Serialize;
 
 /// Advisory severity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum AdvisoryKind {
     Info,
     Warning,
 }
 
 /// One piece of advice; hosts decide how to display it.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Advisory {
     pub kind: AdvisoryKind,
     pub message: String,

@@ -1,0 +1,15 @@
+[package]
+name = "gm-tokens-ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C ABI over gm-tokens for plugin hosts: JSON in, JSON out, nothing to marshal but strings."
+license = "MIT"
+
+[lib]
+name = "gm_tokens_ffi"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gm-tokens = { path = ".." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

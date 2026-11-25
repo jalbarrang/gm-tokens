@@ -1,0 +1,19 @@
+name: windows-dll
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  dll:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+      - run: cargo build --release -p gm-tokens-ffi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gm_tokens-windows-x64
+          path: target/release/gm_tokens_ffi.dll
