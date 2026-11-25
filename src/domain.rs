@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Goddess color a fragment carries; the tree's top node picks the burst.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GoddessColor {
@@ -23,6 +24,7 @@ impl GoddessColor {
         [GoddessColor::Red, GoddessColor::Blue, GoddessColor::Yellow];
 }
 
+/// Training attribute; a fragment's attribute feeds that facility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrainingType {
@@ -58,6 +60,7 @@ impl TrainingType {
     ];
 }
 
+/// How a fragment entered the run; drives the double-drop tables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FragmentSource {
@@ -70,6 +73,7 @@ pub enum FragmentSource {
     GoddessEvent,
 }
 
+/// Career phase; drives the burst plan (3-4-4-1) and year-end red rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CareerPhase {
@@ -79,6 +83,7 @@ pub enum CareerPhase {
     UraFinale,
 }
 
+/// One fragment sitting in the current tree.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FragmentToken {
     pub color: GoddessColor,

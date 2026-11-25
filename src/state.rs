@@ -6,6 +6,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use serde::Serialize;
 
+/// One tracked facility.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct FacilityInfo {
     pub clicks: u32,
@@ -14,6 +15,7 @@ pub struct FacilityInfo {
     pub level: u32,
 }
 
+/// One recorded burst.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BurstRecord {
     pub turn: u32,
@@ -21,6 +23,7 @@ pub struct BurstRecord {
     pub phase: CareerPhase,
 }
 
+/// Everything derived from the event list so far.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RunSnapshot {
     pub phase: CareerPhase,
@@ -34,6 +37,7 @@ pub struct RunSnapshot {
     pub races_lost: u32,
 }
 
+/// Rebuilds the full snapshot from the events; pass a seeded rng for identical replays.
 pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
     let mut phase = CareerPhase::Junior;
     let mut last_turn = 0;
@@ -117,6 +121,7 @@ pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
     }
 }
 
+/// [`replay`] with a fixed seed.
 pub fn replay_seeded(events: &[RunEvent], seed: u64) -> RunSnapshot {
     let mut rng = StdRng::seed_from_u64(seed);
     replay(events, &mut rng)

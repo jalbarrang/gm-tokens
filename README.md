@@ -46,4 +46,6 @@ actual upper-layer rolls, `tree::build_with` accepts an explicit coin.
 
 `cargo test` — tree merge rules with scripted coins, facility arithmetic,
 burst overflow carry-over, goddess caps, advisory triggers, a scripted
-junior year, and a round-trip pin of every guide number.
+junior year, and a round-trip pin of every guide number. Plain comments are
+abolished: `tests/no_comments.rs` fails the build if one appears; short doc
+comments on public items are the allowed exception.

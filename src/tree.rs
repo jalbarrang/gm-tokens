@@ -3,8 +3,10 @@ use rand::Rng;
 use serde::Serialize;
 use std::cmp::Ordering;
 
+/// Bottom-layer slots in one full tree.
 pub const SLOT_COUNT: usize = 8;
 
+/// A merged fragment, with the bottom-row fragments backing it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TreeNode {
     pub color: GoddessColor,
@@ -13,6 +15,7 @@ pub struct TreeNode {
     pub backing: Vec<FragmentToken>,
 }
 
+/// The pyramid, rebuilt from the bottom slots.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct TreeSnapshot {
     pub bottom_slots: Vec<FragmentToken>,
@@ -26,20 +29,24 @@ impl TreeSnapshot {
         self.bottom_slots.len() >= SLOT_COUNT
     }
 
+    /// The color a burst here would have.
     pub fn burst_color(&self) -> Option<GoddessColor> {
         self.top.as_ref().map(|node| node.color)
     }
 
+    /// 0-based slot the next fragment fills.
     pub fn next_slot_index(&self) -> usize {
         self.bottom_slots.len().min(SLOT_COUNT)
     }
 }
 
+/// Rebuilds every layer from the bottom slots; a seeded rng makes replays identical.
 pub fn build(slots: &[FragmentToken], rng: &mut impl Rng) -> TreeSnapshot {
     let mut coin = || rng.random_bool(0.8);
     build_with(slots, &mut coin)
 }
 
+/// Like [`build`], but the "left wins" coin (training inheritance, PK ties) is explicit.
 pub fn build_with(slots: &[FragmentToken], coin: &mut dyn FnMut() -> bool) -> TreeSnapshot {
     let bottom: Vec<FragmentToken> = slots.iter().take(SLOT_COUNT).cloned().collect();
     let mut tree = TreeSnapshot {

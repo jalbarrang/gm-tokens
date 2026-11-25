@@ -2,12 +2,14 @@ use crate::domain::{CareerPhase, GoddessColor};
 use crate::state::RunSnapshot;
 use crate::tables;
 
+/// Advisory severity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdvisoryKind {
     Info,
     Warning,
 }
 
+/// One piece of advice; hosts decide how to display it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Advisory {
     pub kind: AdvisoryKind,
@@ -22,6 +24,7 @@ fn warning(message: impl Into<String>) -> Advisory {
     Advisory { kind: AdvisoryKind::Warning, message: message.into() }
 }
 
+/// The guide's rules of thumb for this snapshot, as plain data.
 pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
     let mut out: Vec<Advisory> = Vec::new();
 

@@ -1,5 +1,8 @@
+//! Guide numbers (Lehan's GM guide, Taiwanese server); balance patches are edited here only.
+
 use crate::domain::{CareerPhase, FragmentSource, GoddessColor, TrainingType};
 
+/// Chance a source drops a second fragment.
 pub fn double_drop_chance(source: FragmentSource) -> f32 {
     match source {
         FragmentSource::TargetRace => 1.00,
@@ -22,9 +25,11 @@ pub const RACE_WIN_POINTS: u32 = 8;
 pub const RACE_LOSS_POINTS: u32 = 4;
 pub const POINTS_PER_FACILITY_LEVEL: u32 = 12;
 
+/// Per-training fragment drop rates, indexed by [`TrainingType::index`].
 pub const ATTRIBUTE_DROP_RATES: [f32; TrainingType::COUNT] =
     [0.216, 0.106, 0.178, 0.128, 0.131, 0.241];
 
+/// Rough energy-point value of a burst, as (min, max).
 pub fn burst_value_estimate(color: GoddessColor) -> (u32, u32) {
     match color {
         GoddessColor::Red => (90, 100),
@@ -33,8 +38,10 @@ pub fn burst_value_estimate(color: GoddessColor) -> (u32, u32) {
     }
 }
 
+/// Aim for at most this many Yellow bursts per run; 4 is tolerated.
 pub const YELLOW_BURST_CAP: u8 = 3;
 
+/// The 3-4-4-1 burst plan.
 pub fn expected_bursts(phase: CareerPhase) -> u8 {
     match phase {
         CareerPhase::Junior => 3,
@@ -43,14 +50,18 @@ pub fn expected_bursts(phase: CareerPhase) -> u8 {
     }
 }
 
+/// Darley Arabian (Red): (energy discount %, training bonus %) per level.
 pub const RED_PASSIVES: [(u8, u8); 5] = [(10, 5), (15, 8), (18, 11), (20, 13), (23, 15)];
 
+/// Godolphin Barb (Blue): (hint rate up %, event chance up) per level.
 pub const BLUE_PASSIVES: [(u8, u8); 5] =
     [(20, 20), (25, 25), (30, 30), (33, 33), (35, 35)];
 
+/// Byerley Turk (Yellow): (event effect up %, chain chance up) per level.
 pub const YELLOW_PASSIVES: [(u8, u8); 5] =
     [(10, 20), (15, 40), (20, 60), (23, 80), (25, 90)];
 
+/// A burst's stat payout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StatGain {
     pub speed: u16,
@@ -72,6 +83,7 @@ const fn gain(
     StatGain { speed, stamina, power, guts, wit, skill_points }
 }
 
+/// Per-card payout of a Blue Burst on that training.
 pub fn blue_burst_gains(training: TrainingType) -> StatGain {
     match training {
         TrainingType::Speed => gain(6, 0, 2, 0, 0, 20),
@@ -83,6 +95,7 @@ pub fn blue_burst_gains(training: TrainingType) -> StatGain {
     }
 }
 
+/// Red Burst training click payout, excluding the energy/mood/race bonus.
 pub fn red_burst_gains(training: TrainingType) -> StatGain {
     match training {
         TrainingType::Speed => gain(15, 0, 6, 0, 0, 5),
@@ -94,6 +107,7 @@ pub fn red_burst_gains(training: TrainingType) -> StatGain {
     }
 }
 
+/// A mid-run stat target; targets is Spd/Sta/Pow/Guts/Wit, None = deck-dependent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StatCheckpoint {
     pub phase: CareerPhase,
@@ -105,6 +119,7 @@ const fn checkpoint(phase: CareerPhase, month: u8, targets: [Option<u16>; 5]) ->
     StatCheckpoint { phase, month, targets }
 }
 
+/// Stat checkpoints from the guide.
 pub const STAT_CHECKPOINTS: &[StatCheckpoint] = &[
     checkpoint(CareerPhase::Classic, 6, [Some(600), Some(450), Some(450), None, Some(450)]),
     checkpoint(CareerPhase::Classic, 12, [Some(900), Some(600), Some(600), None, Some(600)]),
