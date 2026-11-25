@@ -2,7 +2,7 @@ use crate::domain::{CareerPhase, GoddessColor, TrainingType};
 use serde::{Deserialize, Serialize};
 
 /// One recorded fact about the run; the event list is the crate's only input.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RunEvent {
     /// A successful training click: 2 facility points in that training.

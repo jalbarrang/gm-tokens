@@ -1,7 +1,7 @@
 use crate::domain::{CareerPhase, FragmentToken, GoddessColor, TrainingType};
 use crate::events::RunEvent;
 use crate::tables;
-use crate::tree::{self, TreeSnapshot, SLOT_COUNT};
+use crate::tree::{self, PredictedTree, SPIRIT_FRAGMENT_MAX};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use serde::Serialize;
@@ -29,7 +29,7 @@ pub struct RunSnapshot {
     pub phase: CareerPhase,
     pub last_turn: u32,
     pub pending_slots: Vec<FragmentToken>,
-    pub tree: TreeSnapshot,
+    pub tree: PredictedTree,
     pub facilities: [FacilityInfo; TrainingType::COUNT],
     pub goddess_levels: [u8; GoddessColor::COUNT],
     pub bursts: Vec<BurstRecord>,
@@ -79,7 +79,7 @@ pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
             RunEvent::BurstActivated { turn, color } => {
                 last_turn = *turn;
                 bursts.push(BurstRecord { turn: *turn, color: *color, phase });
-                let consumed = pending.len().min(SLOT_COUNT);
+                let consumed = pending.len().min(SPIRIT_FRAGMENT_MAX as usize);
                 pending.drain(..consumed);
             }
         }
@@ -112,7 +112,7 @@ pub fn replay(events: &[RunEvent], rng: &mut impl Rng) -> RunSnapshot {
         phase,
         last_turn,
         pending_slots: pending.clone(),
-        tree: tree::build(&pending, rng),
+        tree: tree::predict(&pending, rng),
         facilities,
         goddess_levels,
         bursts,
@@ -174,7 +174,7 @@ mod tests {
 
         let snapshot = replay_seeded(&events, 0);
         assert_eq!(snapshot.pending_slots.len(), 2);
-        assert_eq!(snapshot.tree.next_slot_index(), 2);
+        assert!(snapshot.tree.layer2[0].is_some());
         assert!(!snapshot.tree.is_complete());
     }
 

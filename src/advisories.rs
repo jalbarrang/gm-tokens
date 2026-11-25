@@ -28,7 +28,7 @@ fn warning(message: impl Into<String>) -> Advisory {
 pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
     let mut out: Vec<Advisory> = Vec::new();
 
-    let next_slot = snapshot.tree.next_slot_index();
+    let next_slot = snapshot.pending_slots.len();
     if next_slot == 0 || next_slot == 4 {
         let slot = if next_slot == 0 { 1 } else { 5 };
         out.push(info(format!(
@@ -37,8 +37,7 @@ pub fn evaluate(snapshot: &RunSnapshot) -> Vec<Advisory> {
     }
 
     if snapshot
-        .tree
-        .bottom_slots
+        .pending_slots
         .first()
         .is_some_and(|f| f.color == GoddessColor::Red)
     {

@@ -40,7 +40,6 @@ fn scripted_junior_year() {
     let snapshot = state::replay_seeded(&events, 42);
 
     assert_eq!(snapshot.pending_slots.len(), 3);
-    assert_eq!(snapshot.tree.next_slot_index(), 3);
     assert!(!snapshot.tree.is_complete());
 
     assert_eq!(snapshot.goddess_levels[GoddessColor::Blue.index()], 1);
